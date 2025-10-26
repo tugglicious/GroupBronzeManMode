@@ -3,6 +3,7 @@ package codepanter.anotherbronzemanmode;
 import net.runelite.client.config.Config;
 import net.runelite.client.config.ConfigGroup;
 import net.runelite.client.config.ConfigItem;
+import net.runelite.client.config.ConfigSection;
 
 @ConfigGroup(AnotherBronzemanModePlugin.CONFIG_GROUP)
 public interface AnotherBronzemanModeConfig extends Config
@@ -92,5 +93,86 @@ public interface AnotherBronzemanModeConfig extends Config
 	)
 	default boolean hideUntradeables() {
     	return false;
+	}
+
+	// Group Sync Section
+	@ConfigSection(
+		name = "Group Sync (JSONBin.io)",
+		description = "Synchronize unlocks with your group using JSONBin.io cloud storage",
+		position = 9,
+		closedByDefault = true
+	)
+	String groupSyncSection = "groupSync";
+
+	@ConfigItem(
+		keyName = "enableGroupSync",
+		name = "Enable group synchronization",
+		description = "Share unlocks with other players in your group via JSONBin.io",
+		section = groupSyncSection,
+		position = 0
+	)
+	default boolean enableGroupSync()
+	{
+		return false;
+	}
+
+	@ConfigItem(
+		keyName = "jsonbinApiKey",
+		name = "JSONBin API Key",
+		description = "Your JSONBin.io API key (X-Master-Key). Get it from jsonbin.io after creating an account.",
+		section = groupSyncSection,
+		position = 1
+	)
+	default String jsonbinApiKey()
+	{
+		return "";
+	}
+
+	@ConfigItem(
+		keyName = "jsonbinBinId",
+		name = "JSONBin Bin ID",
+		description = "Your group's Bin ID. Create a new bin at jsonbin.io and share this ID with your group.",
+		section = groupSyncSection,
+		position = 2
+	)
+	default String jsonbinBinId()
+	{
+		return "";
+	}
+
+	@ConfigItem(
+		keyName = "groupName",
+		name = "Group name",
+		description = "Your group's name (optional, for display purposes only)",
+		section = groupSyncSection,
+		position = 3
+	)
+	default String groupName()
+	{
+		return "My Group";
+	}
+
+	@ConfigItem(
+		keyName = "syncInterval",
+		name = "Sync interval (minutes)",
+		description = "How often to automatically sync unlocks from JSONBin (1-60 minutes)",
+		section = groupSyncSection,
+		position = 4
+	)
+	default int syncInterval()
+	{
+		return 5;
+	}
+
+	@ConfigItem(
+		keyName = "showWhoUnlocked",
+		name = "Show who unlocked items",
+		description = "Display which player unlocked each item in notifications",
+		section = groupSyncSection,
+		position = 5
+	)
+	default boolean showWhoUnlocked()
+	{
+		return true;
 	}
 }
