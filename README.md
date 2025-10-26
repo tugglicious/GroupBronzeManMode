@@ -1,5 +1,7 @@
-# Another Bronzeman Mode RuneLite Plugin
-This plugin implements the custom gamemode called 'Bronzeman mode'.
+# Group Bronzeman Mode RuneLite Plugin
+
+This plugin implements the custom gamemode called 'Group Bronzeman mode', based on Another Bronzeman Mode.
+
 The idea of this gamemode lies somewhere between a 'normal' account and an 'Ironman' account; as you can't buy an item on the Grand Exchange until you have obtained that item through other means, such as getting it as a drop or buying it in a shop.
 
 The plugin enforces this rule by keeping track of all items you acquire, and only allowing you to buy this item.
@@ -36,8 +38,14 @@ This interface comes with search functionality, as well as the ability to re-loc
 
 ## Credits
 
-- First envisioned by [GUDI (Mod Ronan)](https://www.youtube.com/watch?v=GFNfa2saOJg)
-- [Initial](https://github.com/sethrem/bronzeman) code written by [Sethrem](https://github.com/sethrem)
-- Code improvements based on the [version](https://github.com/dekvall/bronzeman-mode) made by [Dekvall](https://github.com/dekvall)
-- Unlock-list backup feature and reset unlocks feature written by [Robin Withes](https://github.com/robinwithes)
-- Collection log integration and search functionality written by [Robin Withes](https://github.com/robinwithes)
+### Main Author
+- **tugglicious** - Group Bronzeman Mode implementation and modifications
+
+### Honorable Mentions - Another Bronzeman Mode Creators
+- **[CodePanter](https://github.com/codepanter)** - Creator of [Another Bronzeman Mode](https://github.com/CodePanter/another-bronzeman-mode), which this plugin is based on
+- **[Sethrem](https://github.com/sethrem)** - Author of the [initial Bronzeman Mode plugin](https://github.com/sethrem/bronzeman)
+- **[Dekvall](https://github.com/dekvall)** - Code improvements in their [bronzeman-mode version](https://github.com/dekvall/bronzeman-mode)
+- **[Robin Withes](https://github.com/robinwithes)** - Unlock-list backup feature, reset unlocks feature, collection log integration, and search functionality
+
+### Original Concept
+- **[GUDI (Mod Ronan)](https://www.youtube.com/watch?v=GFNfa2saOJg)** - First envisioned the Bronzeman mode concept
