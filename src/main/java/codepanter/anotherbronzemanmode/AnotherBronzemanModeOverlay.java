@@ -1,5 +1,10 @@
 /*
- * Copyright (c) 2019, CodePanter <https://github.com/codepanter>
+ * Group Bronzeman Mode
+ * Copyright (c) 2025, tugglicious <https://github.com/tugglicious>
+ *
+ * Based on Another Bronzeman Mode
+ * Original Copyright (c) 2019, CodePanter <https://github.com/codepanter>
+ *
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
