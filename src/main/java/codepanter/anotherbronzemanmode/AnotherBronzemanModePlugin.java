@@ -78,6 +78,9 @@ import java.nio.file.StandardCopyOption;
 import java.util.*;
 import java.text.SimpleDateFormat;
 import java.util.List;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Provides;
@@ -156,7 +159,15 @@ public class AnotherBronzemanModePlugin extends Plugin
     @Inject
     private AnotherBronzemanModeOverlay AnotherBronzemanModeOverlay;
 
+    @Inject
+    private ScheduledExecutorService executor;
+
     private List<Integer> unlockedItems;
+
+    // Group sync fields
+    private GroupSyncManager groupSyncManager;
+    private JsonBinClient jsonBinClient;
+    private ScheduledFuture<?> syncTask;
 
     @Getter
     private BufferedImage unlockImage = null;
@@ -231,6 +242,12 @@ public class AnotherBronzemanModePlugin extends Plugin
 
         clientToolbar.addNavigation(navButton);
 
+        // Initialize group sync if enabled
+        if (config.enableGroupSync())
+        {
+            initializeGroupSync();
+        }
+
         clientThread.invoke(() ->
         {
             if (client.getGameState() == GameState.LOGGED_IN)
@@ -261,6 +278,9 @@ public class AnotherBronzemanModePlugin extends Plugin
         }
 
         clientToolbar.removeNavigation(navButton);
+
+        // Stop group sync
+        stopGroupSync();
 
         clientThread.invoke(() ->
         {
@@ -415,6 +435,35 @@ public class AnotherBronzemanModePlugin extends Plugin
                     chatCommandManager.unregisterCommand(BM_RESET_STRING);
                 }
             }
+            else if (event.getKey().equals("enableGroupSync"))
+            {
+                if (config.enableGroupSync())
+                {
+                    initializeGroupSync();
+                }
+                else
+                {
+                    stopGroupSync();
+                }
+            }
+            else if (event.getKey().equals("jsonbinApiKey") || event.getKey().equals("jsonbinBinId"))
+            {
+                // Reinitialize if config changes
+                if (config.enableGroupSync())
+                {
+                    stopGroupSync();
+                    initializeGroupSync();
+                }
+            }
+            else if (event.getKey().equals("syncInterval"))
+            {
+                // Restart sync task with new interval
+                if (config.enableGroupSync() && syncTask != null)
+                {
+                    stopGroupSync();
+                    initializeGroupSync();
+                }
+            }
         }
     }
 
@@ -520,6 +569,14 @@ public class AnotherBronzemanModePlugin extends Plugin
 		boolean tradeable = itemManager.getItemComposition(itemId).isTradeable();
 		if (!(config.hideUntradeables() && !tradeable)) AnotherBronzemanModeOverlay.addItemUnlock(itemId);
         savePlayerUnlocks();// Save after every item to fail-safe logging out
+
+        // Queue for group sync if enabled
+        if (config.enableGroupSync() && groupSyncManager != null)
+        {
+            String itemName = client.getItemDefinition(itemId).getMembersName();
+            String playerName = client.getLocalPlayer() != null ? client.getLocalPlayer().getName() : "Unknown";
+            groupSyncManager.queueUnlock(itemId, itemName, playerName);
+        }
     }
 
     /** Queues the removal of an unlocked item **/
@@ -989,5 +1046,148 @@ public class AnotherBronzemanModePlugin extends Plugin
         newModIcons[newModIcons.length - 1] = indexedSprite;
 
         client.setModIcons(newModIcons);
+    }
+
+    /**
+     * Initialize group synchronization with JSONBin
+     */
+    private void initializeGroupSync()
+    {
+        String apiKey = config.jsonbinApiKey();
+        String binId = config.jsonbinBinId();
+
+        if (apiKey == null || apiKey.isEmpty() || binId == null || binId.isEmpty())
+        {
+            log.warn("Group sync enabled but JSONBin credentials not configured");
+            return;
+        }
+
+        log.info("Initializing group sync with JSONBin");
+        jsonBinClient = new JsonBinClient(apiKey, binId);
+        groupSyncManager = new GroupSyncManager(jsonBinClient);
+
+        // Initialize with existing local unlocks
+        if (unlockedItems != null && !unlockedItems.isEmpty())
+        {
+            String playerName = client.getLocalPlayer() != null ? client.getLocalPlayer().getName() : "Unknown";
+            groupSyncManager.initializeFromLocal(unlockedItems, playerName);
+        }
+
+        // Initial sync from remote
+        executor.submit(() -> {
+            int newUnlocks = groupSyncManager.syncFromRemote();
+            if (newUnlocks > 0)
+            {
+                // Merge remote unlocks into local
+                mergeRemoteUnlocks();
+                sendChatMessage("Synced " + newUnlocks + " new unlocks from your group!");
+            }
+        });
+
+        // Schedule periodic sync
+        int intervalMinutes = Math.max(1, Math.min(60, config.syncInterval()));
+        syncTask = executor.scheduleWithFixedDelay(
+            this::performSync,
+            intervalMinutes,
+            intervalMinutes,
+            TimeUnit.MINUTES
+        );
+
+        log.info("Group sync started with {}-minute interval", intervalMinutes);
+    }
+
+    /**
+     * Stop group synchronization
+     */
+    private void stopGroupSync()
+    {
+        if (syncTask != null)
+        {
+            syncTask.cancel(false);
+            syncTask = null;
+        }
+
+        // Push any pending unlocks before stopping
+        if (groupSyncManager != null && groupSyncManager.hasPendingPush())
+        {
+            executor.submit(() -> groupSyncManager.pushToRemote());
+        }
+
+        groupSyncManager = null;
+        jsonBinClient = null;
+        log.info("Group sync stopped");
+    }
+
+    /**
+     * Perform periodic sync (pull from remote, then push local)
+     */
+    private void performSync()
+    {
+        if (groupSyncManager == null)
+        {
+            return;
+        }
+
+        try
+        {
+            // First, pull new unlocks from remote
+            int newUnlocks = groupSyncManager.syncFromRemote();
+            if (newUnlocks > 0)
+            {
+                mergeRemoteUnlocks();
+                if (config.sendNotification())
+                {
+                    notifier.notify("Group Bronzeman: " + newUnlocks + " new unlocks from your group!");
+                }
+                else if (config.sendChatMessage())
+                {
+                    sendChatMessage("Your group unlocked " + newUnlocks + " new items!");
+                }
+            }
+
+            // Then, push our pending unlocks
+            if (groupSyncManager.hasPendingPush())
+            {
+                groupSyncManager.pushToRemote();
+            }
+        }
+        catch (Exception e)
+        {
+            log.error("Error during group sync", e);
+        }
+    }
+
+    /**
+     * Merge remote unlocks into local unlocked items list
+     */
+    private void mergeRemoteUnlocks()
+    {
+        if (groupSyncManager == null)
+        {
+            return;
+        }
+
+        Set<Integer> remoteItems = groupSyncManager.getUnlockedItems();
+        for (Integer itemId : remoteItems)
+        {
+            if (!unlockedItems.contains(itemId))
+            {
+                unlockedItems.add(itemId);
+
+                // Optionally show who unlocked it
+                if (config.showWhoUnlocked())
+                {
+                    JsonBinClient.UnlockEntry entry = groupSyncManager.getUnlockEntry(itemId);
+                    if (entry != null)
+                    {
+                        log.info("Item {} was unlocked by {}", entry.itemName, entry.unlockedBy);
+                    }
+                }
+            }
+        }
+
+        // Save updated unlocks
+        savePlayerUnlocks();
+        panel.displayItems(new ArrayList<ItemObject>()); // Redraw panel
     }
 }

@@ -18,6 +18,10 @@ dependencies {
     compileOnly 'org.projectlombok:lombok:1.18.4'
     annotationProcessor 'org.projectlombok:lombok:1.18.4'
 
+    // OkHttp and Gson are already included in RuneLite client, but we declare them for compilation
+    compileOnly 'com.squareup.okhttp3:okhttp:4.9.1'
+    compileOnly 'com.google.code.gson:gson:2.8.9'
+
     testImplementation 'junit:junit:4.12'
     testImplementation 'org.slf4j:slf4j-simple:1.7.12'
     testImplementation group: 'net.runelite', name:'client', version: runeLiteVersion, {
