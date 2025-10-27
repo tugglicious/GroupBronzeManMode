@@ -428,8 +428,8 @@ public class AnotherBronzemanModePlugin extends Plugin
                 return;
             }
 
-            // Get the target player name
-            String targetPlayer = Text.sanitize(event.getMenuTarget());
+            // Get the target player name and remove color tags
+            String targetPlayer = Text.removeTags(event.getMenuTarget());
 
             // Remove any level indicators or extra text (e.g., "PlayerName (level-126)")
             if (targetPlayer.contains("(")) {
@@ -482,7 +482,7 @@ public class AnotherBronzemanModePlugin extends Plugin
                 Widget tradePartnerWidget = client.getWidget(event.getGroupId(), 31); // Trade partner name widget
                 if (tradePartnerWidget != null)
                 {
-                    String tradingWith = Text.sanitize(tradePartnerWidget.getText());
+                    String tradingWith = Text.removeTags(tradePartnerWidget.getText());
                     log.info("Trade screen opened with: '{}' | Group list has {} members: {}", tradingWith, namesBronzeman != null ? namesBronzeman.size() : 0, namesBronzeman);
 
                     // Check if they're a group member
