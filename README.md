@@ -19,6 +19,23 @@ When the plugin is enabled for the first time it will unlock all items in your i
 - See who unlocked each item (optional)
 - Works offline - syncs when connection is restored
 
+### ⚠️ Important: Reset Command with Group Sync
+
+**WARNING:** The `!bmreset` command **only resets your LOCAL unlocks** - it does NOT clear the JSONBin cloud storage.
+
+**What happens when you use `!bmreset` with group sync enabled:**
+1. Your local unlock list is cleared
+2. The JSONBin (shared with your group) is **NOT** cleared
+3. On the next sync (within a few minutes), all unlocks will be pulled back from the cloud
+4. Your unlock list will be restored to match the group's unlocks
+
+**If you want to fully reset the group's unlocks:**
+- You must **manually delete the JSONBin** at https://jsonbin.io
+- Create a new bin and update all group members with the new Bin ID
+- OR manually edit the bin to remove all unlocks using the JSONBin.io web interface
+
+**Recommendation:** Coordinate with your group before resetting unlocks to avoid confusion.
+
 ## Features
 
 ### Core Features
