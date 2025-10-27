@@ -248,7 +248,24 @@ public class AnotherBronzemanModePlugin extends Plugin
         {
             if (client.getGameState() == GameState.LOGGED_IN)
             {
-                checkCharacterWhitelist();
+                // Try to check whitelist immediately
+                boolean nameAvailable = checkCharacterWhitelist();
+
+                // If name wasn't available, schedule retries
+                if (!nameAvailable)
+                {
+                    log.info("Scheduling delayed whitelist check retries...");
+                    // Retry after 1 second
+                    executor.schedule(() -> clientThread.invoke(() -> {
+                        if (!checkCharacterWhitelist() && config.enableWhitelist())
+                        {
+                            // If still not available after 1s, try again after 3s more
+                            executor.schedule(() -> clientThread.invoke(() -> {
+                                checkCharacterWhitelist();
+                            }), 3, TimeUnit.SECONDS);
+                        }
+                    }), 1, TimeUnit.SECONDS);
+                }
 
                 if (!disabledByWhitelist)
                 {
@@ -311,7 +328,23 @@ public class AnotherBronzemanModePlugin extends Plugin
             LOGGING_IN = false; // Makes sure this only happens when having just logged in; not when the state changed from 'LOADING'.
 
             // Check character whitelist
-            checkCharacterWhitelist();
+            boolean nameAvailable = checkCharacterWhitelist();
+
+            // If name wasn't available, schedule retries
+            if (!nameAvailable)
+            {
+                log.info("Player name not loaded at login event, scheduling retries...");
+                // Retry after 1 second
+                executor.schedule(() -> clientThread.invoke(() -> {
+                    if (!checkCharacterWhitelist() && config.enableWhitelist())
+                    {
+                        // If still not available after 1s, try again after 3s more
+                        executor.schedule(() -> clientThread.invoke(() -> {
+                            checkCharacterWhitelist();
+                        }), 3, TimeUnit.SECONDS);
+                    }
+                }), 1, TimeUnit.SECONDS);
+            }
 
             if (disabledByWhitelist)
             {
@@ -1338,20 +1371,21 @@ public class AnotherBronzemanModePlugin extends Plugin
     /**
      * Check if the current character is on the whitelist
      * Sets disabledByWhitelist flag accordingly
+     * @return true if player name was available and check completed, false if name not yet loaded
      */
-    private void checkCharacterWhitelist()
+    private boolean checkCharacterWhitelist()
     {
         if (!config.enableWhitelist())
         {
             disabledByWhitelist = false;
-            return;
+            return true; // Check completed (whitelist disabled)
         }
 
         String whitelistStr = config.whitelistedCharacters();
         if (whitelistStr == null || whitelistStr.isEmpty())
         {
             disabledByWhitelist = false;
-            return;
+            return true; // Check completed (no whitelist configured)
         }
 
         // Get player name safely - handle null cases
@@ -1362,12 +1396,12 @@ public class AnotherBronzemanModePlugin extends Plugin
         }
 
         // If player name isn't loaded yet, don't disable the plugin
-        // The check will run again on login event when name is available
+        // The check will be retried shortly
         if (playerName.isEmpty())
         {
             disabledByWhitelist = false;
-            log.warn("Player name not available yet, skipping whitelist check until login completes");
-            return;
+            log.warn("Player name not available yet, skipping whitelist check (will retry)");
+            return false; // Check incomplete - name not available
         }
 
         List<String> whitelist = Text.fromCSV(whitelistStr);
@@ -1383,5 +1417,7 @@ public class AnotherBronzemanModePlugin extends Plugin
             log.info("Character '{}' not on whitelist. Plugin disabled.", playerName);
             sendChatMessage("Group Bronzeman Mode is disabled for this character (not on whitelist).");
         }
+
+        return true; // Check completed successfully
     }
 }
