@@ -729,15 +729,23 @@ public class AnotherBronzemanModePlugin extends Plugin
     }
 
     /**
-     * Send a message to the friends chat
+     * Prepare a message for the friends chat by setting it in the chatbox
+     * The user will need to press Enter to send it
      */
     private void sendFriendsChatMessage(String message)
     {
-        // RuneLite doesn't have a direct API to send FC messages, so we use the chatbox
-        // This simulates typing a message and pressing enter
         clientThread.invoke(() -> {
-            String chatMessage = message;
-            client.runScript(96, chatMessage); // Script 96 is for sending chat messages
+            // Check if player is in a friends chat
+            if (client.getFriendsChatManager() == null)
+            {
+                log.debug("Not in a friends chat, skipping auto-message");
+                return;
+            }
+
+            // Set the message in the chatbox input field
+            // The user just needs to press Enter to send it
+            client.setVar(VarClientStr.CHATBOX_TYPED_TEXT, message);
+            log.debug("Set FC message in chatbox: {}", message);
         });
     }
 
