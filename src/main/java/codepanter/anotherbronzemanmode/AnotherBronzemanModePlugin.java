@@ -539,7 +539,7 @@ public class AnotherBronzemanModePlugin extends Plugin
             }
             else if (event.getKey().equals("enableGroupSync"))
             {
-                if (config.enableGroupSync())
+                if (config.enableGroupSync() && !disabledByWhitelist)
                 {
                     initializeGroupSync();
                 }
@@ -550,8 +550,8 @@ public class AnotherBronzemanModePlugin extends Plugin
             }
             else if (event.getKey().equals("jsonbinApiKey") || event.getKey().equals("jsonbinBinId"))
             {
-                // Reinitialize if config changes
-                if (config.enableGroupSync())
+                // Reinitialize if config changes (only if whitelisted)
+                if (config.enableGroupSync() && !disabledByWhitelist)
                 {
                     stopGroupSync();
                     initializeGroupSync();
@@ -559,8 +559,8 @@ public class AnotherBronzemanModePlugin extends Plugin
             }
             else if (event.getKey().equals("syncInterval"))
             {
-                // Restart sync task with new interval
-                if (config.enableGroupSync() && syncTask != null)
+                // Restart sync task with new interval (only if whitelisted)
+                if (config.enableGroupSync() && syncTask != null && !disabledByWhitelist)
                 {
                     stopGroupSync();
                     initializeGroupSync();
