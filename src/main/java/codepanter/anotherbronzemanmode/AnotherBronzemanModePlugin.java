@@ -243,24 +243,30 @@ public class AnotherBronzemanModePlugin extends Plugin
 
         clientToolbar.addNavigation(navButton);
 
-        // Initialize group sync if enabled
-        if (config.enableGroupSync())
-        {
-            initializeGroupSync();
-        }
-
+        // Check whitelist if already logged in (plugin enabled mid-session)
         clientThread.invoke(() ->
         {
             if (client.getGameState() == GameState.LOGGED_IN)
             {
-                onSeasonalWorld = isSeasonalWorld(client.getWorld());
-                // A player can not be a bronzeman on a seasonal world.
-                if (!onSeasonalWorld)
+                checkCharacterWhitelist();
+
+                if (!disabledByWhitelist)
                 {
-                    setChatboxName(getNameChatbox());
+                    onSeasonalWorld = isSeasonalWorld(client.getWorld());
+                    // A player can not be a bronzeman on a seasonal world.
+                    if (!onSeasonalWorld)
+                    {
+                        setChatboxName(getNameChatbox());
+                    }
                 }
             }
         });
+
+        // Initialize group sync if enabled (after whitelist check)
+        if (config.enableGroupSync() && !disabledByWhitelist)
+        {
+            initializeGroupSync();
+        }
     }
 
     @Override
@@ -305,25 +311,13 @@ public class AnotherBronzemanModePlugin extends Plugin
             LOGGING_IN = false; // Makes sure this only happens when having just logged in; not when the state changed from 'LOADING'.
 
             // Check character whitelist
-            if (config.enableWhitelist())
-            {
-                String whitelistStr = config.whitelistedCharacters();
-                if (whitelistStr != null && !whitelistStr.isEmpty())
-                {
-                    List<String> whitelist = Text.fromCSV(whitelistStr);
-                    String playerName = client.getLocalPlayer() != null ? client.getLocalPlayer().getName() : "";
+            checkCharacterWhitelist();
 
-                    if (!whitelist.contains(playerName))
-                    {
-                        disabledByWhitelist = true;
-                        log.info("Character '{}' not on whitelist. Plugin disabled.", playerName);
-                        sendChatMessage("Group Bronzeman Mode is disabled for this character (not on whitelist).");
-                        return; // Exit early - don't load unlocks or enable features
-                    }
-                }
+            if (disabledByWhitelist)
+            {
+                return; // Exit early - don't load unlocks or enable features
             }
 
-            disabledByWhitelist = false; // Character is allowed
             setupUnlockHistory();
             loadPlayerUnlocks();
             loadResources();
@@ -389,7 +383,13 @@ public class AnotherBronzemanModePlugin extends Plugin
             return; // Allow all trading if character not on whitelist
         }
 
-        if (event.getMenuOption().equals("Trade with") || event.getMenuOption().equals("Accept trade")) {
+        String menuOption = event.getMenuOption();
+
+        // Catch all trade-related menu options
+        if (menuOption.equals("Trade with") ||
+            menuOption.equals("Accept trade") ||
+            menuOption.contains("trade")) {
+
             // If "Allow trading" is enabled, allow all trades
             if (config.allowTrading()) {
                 return;
@@ -398,10 +398,19 @@ public class AnotherBronzemanModePlugin extends Plugin
             // Get the target player name
             String targetPlayer = Text.sanitize(event.getMenuTarget());
 
+            // Remove any level indicators or extra text (e.g., "PlayerName (level-126)")
+            if (targetPlayer.contains("(")) {
+                targetPlayer = targetPlayer.substring(0, targetPlayer.indexOf("(")).trim();
+            }
+
+            log.debug("Trade attempt with: '{}' (raw target: '{}')", targetPlayer, event.getMenuTarget());
+
             // Check if target is on the bronzeman names list (group members)
             if (namesBronzeman != null && !namesBronzeman.isEmpty()) {
                 for (String groupMember : namesBronzeman) {
-                    if (targetPlayer.equalsIgnoreCase(groupMember)) {
+                    String cleanGroupMember = groupMember.trim();
+                    if (targetPlayer.equalsIgnoreCase(cleanGroupMember)) {
+                        log.info("Allowing trade with group member: {}", targetPlayer);
                         // Allow trade with group members
                         return;
                     }
@@ -409,9 +418,62 @@ public class AnotherBronzemanModePlugin extends Plugin
             }
 
             // Block trade - not a group member
+            log.info("Blocking trade with non-group member: {}", targetPlayer);
             event.consume();
-            sendChatMessage("You can only trade with your group members (configure in 'Bronzeman Names').");
+            sendChatMessage("You can only trade with your group members: " + config.namesBronzeman());
             return;
+        }
+    }
+
+    @Subscribe
+    public void onWidgetLoaded(WidgetLoaded event)
+    {
+        if (disabledByWhitelist)
+        {
+            return;
+        }
+
+        // Trade screen widget IDs
+        // 335 = First trade screen
+        // 334 = Second trade screen (confirm)
+        if (event.getGroupId() == 335 || event.getGroupId() == 334)
+        {
+            if (config.allowTrading())
+            {
+                return; // Allow all trades
+            }
+
+            // Get the trading partner's name from the widget
+            clientThread.invokeLater(() -> {
+                Widget tradePartnerWidget = client.getWidget(event.getGroupId(), 31); // Trade partner name widget
+                if (tradePartnerWidget != null)
+                {
+                    String tradingWith = Text.sanitize(tradePartnerWidget.getText());
+                    log.debug("Trade screen opened with: '{}'", tradingWith);
+
+                    // Check if they're a group member
+                    boolean isGroupMember = false;
+                    if (namesBronzeman != null && !namesBronzeman.isEmpty())
+                    {
+                        for (String groupMember : namesBronzeman)
+                        {
+                            if (tradingWith.equalsIgnoreCase(groupMember.trim()))
+                            {
+                                isGroupMember = true;
+                                break;
+                            }
+                        }
+                    }
+
+                    if (!isGroupMember)
+                    {
+                        log.info("Closing trade screen - {} is not a group member", tradingWith);
+                        // Close the trade screen
+                        client.runScript(299); // Close trade interface script
+                        sendChatMessage("You can only trade with your group members!");
+                    }
+                }
+            });
         }
     }
 
@@ -621,6 +683,11 @@ public class AnotherBronzemanModePlugin extends Plugin
     /** Queues a new unlock to be properly displayed **/
     public void queueItemUnlock(int itemId)
     {
+        if (disabledByWhitelist)
+        {
+            return; // Skip if character not on whitelist (failsafe)
+        }
+
         unlockedItems.add(itemId);
 
         panel.displayItems(new ArrayList<ItemObject>()); // Redraw the panel
@@ -1266,5 +1333,40 @@ public class AnotherBronzemanModePlugin extends Plugin
         // Save updated unlocks
         savePlayerUnlocks();
         panel.displayItems(new ArrayList<ItemObject>()); // Redraw panel
+    }
+
+    /**
+     * Check if the current character is on the whitelist
+     * Sets disabledByWhitelist flag accordingly
+     */
+    private void checkCharacterWhitelist()
+    {
+        if (!config.enableWhitelist())
+        {
+            disabledByWhitelist = false;
+            return;
+        }
+
+        String whitelistStr = config.whitelistedCharacters();
+        if (whitelistStr == null || whitelistStr.isEmpty())
+        {
+            disabledByWhitelist = false;
+            return;
+        }
+
+        List<String> whitelist = Text.fromCSV(whitelistStr);
+        String playerName = client.getLocalPlayer() != null ? client.getLocalPlayer().getName() : "";
+
+        if (whitelist.contains(playerName))
+        {
+            disabledByWhitelist = false;
+            log.info("Character '{}' is on whitelist. Plugin enabled.", playerName);
+        }
+        else
+        {
+            disabledByWhitelist = true;
+            log.info("Character '{}' not on whitelist. Plugin disabled.", playerName);
+            sendChatMessage("Group Bronzeman Mode is disabled for this character (not on whitelist).");
+        }
     }
 }
