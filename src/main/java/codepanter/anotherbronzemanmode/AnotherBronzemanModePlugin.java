@@ -89,9 +89,9 @@ import static net.runelite.http.api.RuneLiteAPI.GSON;
 
 @Slf4j
 @PluginDescriptor(
-        name = "Group Bronzeman Mode",
-        description = "Group Bronzeman Mode - Limits Grand Exchange access to only allow buying items obtained 'the Ironman way'. Supports group sync via JSONBin.io.",
-        tags = {"overlay", "bronzeman", "group"}
+        name = "GBM - Group Bronzeman Mode",
+        description = "GBM - Group Bronzeman Mode - Limits Grand Exchange access to only allow buying items obtained 'the Ironman way'. Supports group sync via JSONBin.io.",
+        tags = {"overlay", "bronzeman", "group", "gbm"}
 )
 public class AnotherBronzemanModePlugin extends Plugin
 {
@@ -235,7 +235,7 @@ public class AnotherBronzemanModePlugin extends Plugin
         final BufferedImage icon = ImageUtil.loadImageResource(getClass(), "/bronzeman_icon.png");
 
         navButton = NavigationButton.builder()
-                .tooltip("Group Bronzeman Mode")
+                .tooltip("GBM - Group Bronzeman Mode")
                 .icon(icon)
                 .panel(panel)
                 .priority(6)
