@@ -8,10 +8,43 @@ import net.runelite.client.config.ConfigSection;
 @ConfigGroup(AnotherBronzemanModePlugin.CONFIG_GROUP)
 public interface AnotherBronzemanModeConfig extends Config
 {
+    // Character Whitelist Section
+    @ConfigSection(
+        name = "Character Whitelist",
+        description = "Restrict plugin to specific characters on your account",
+        position = 0,
+        closedByDefault = false
+    )
+    String whitelistSection = "whitelist";
+
+    @ConfigItem(
+        keyName = "enableWhitelist",
+        name = "Enable character whitelist",
+        description = "Only run the plugin for specific characters. Useful if you have multiple characters but only some are bronzemen.",
+        section = whitelistSection,
+        position = 0
+    )
+    default boolean enableWhitelist()
+    {
+        return false;
+    }
+
+    @ConfigItem(
+        keyName = "whitelistedCharacters",
+        name = "Whitelisted characters",
+        description = "Comma-separated list of character names allowed to use this plugin. Example: MyIronman, GroupIM, BronzeMan69",
+        section = whitelistSection,
+        position = 1
+    )
+    default String whitelistedCharacters()
+    {
+        return "";
+    }
+
     @ConfigItem(
             keyName = "namesBronzeman",
             name = "Bronzeman Names",
-            position = 1,
+            position = 2,
             description = "Configures names of bronzemen to highlight in chat. Format: (name), (name)"
     )
     default String namesBronzeman()
@@ -64,10 +97,21 @@ public interface AnotherBronzemanModeConfig extends Config
     }
 
     @ConfigItem(
+        keyName = "autoFriendsChatMessage",
+        name = "Auto friends chat message",
+        description = "Automatically send a message to friends chat when you unlock an item (e.g., 'I unlocked Fire rune for the group!'). Requires being in a friends chat.",
+        position = 6
+    )
+    default boolean autoFriendsChatMessage()
+    {
+        return false;
+    }
+
+    @ConfigItem(
         keyName = "allowTrading",
         name = "Allow trading as a bronzeman",
         description = "Allows the player to trade even though they are a bronzeman.",
-        position = 6
+        position = 7
     )
     default boolean allowTrading()
     {
@@ -78,7 +122,7 @@ public interface AnotherBronzemanModeConfig extends Config
         keyName = "resetCommand",
         name = "Enable reset command",
         description = "Enables the !bmreset command used for wiping your unlocked items.",
-        position = 7
+        position = 8
     )
     default boolean resetCommand()
     {
@@ -89,7 +133,7 @@ public interface AnotherBronzemanModeConfig extends Config
     	keyName = "hideUntradeables",
 		name = "Hide untradeable item unlocks",
 		description = "Prevents unlock popups for untradeable items and in chat/notifications",
-		position = 8
+		position = 9
 	)
 	default boolean hideUntradeables() {
     	return false;
@@ -99,7 +143,7 @@ public interface AnotherBronzemanModeConfig extends Config
 	@ConfigSection(
 		name = "Group Sync (JSONBin.io)",
 		description = "Synchronize unlocks with your group using JSONBin.io cloud storage",
-		position = 9,
+		position = 10,
 		closedByDefault = true
 	)
 	String groupSyncSection = "groupSync";
