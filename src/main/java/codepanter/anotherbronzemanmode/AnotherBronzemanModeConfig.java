@@ -43,9 +43,9 @@ public interface AnotherBronzemanModeConfig extends Config
 
     @ConfigItem(
             keyName = "namesBronzeman",
-            name = "Bronzeman Names",
+            name = "Bronzeman Names (Group Members)",
             position = 2,
-            description = "Configures names of bronzemen to highlight in chat. Format: (name), (name)"
+            description = "Comma-separated list of your group members. These players will: (1) Have a bronzeman icon in chat, and (2) Be allowed to trade with you. Example: IronBro, GroupIM, BronzeMan69"
     )
     default String namesBronzeman()
     {
@@ -109,8 +109,8 @@ public interface AnotherBronzemanModeConfig extends Config
 
     @ConfigItem(
         keyName = "allowTrading",
-        name = "Allow trading as a bronzeman",
-        description = "Allows the player to trade even though they are a bronzeman.",
+        name = "Allow trading with everyone",
+        description = "Allow trading with ALL players (not just group members). By default, you can only trade with players in 'Bronzeman Names (Group Members)'. Enable this to remove all trading restrictions.",
         position = 7
     )
     default boolean allowTrading()

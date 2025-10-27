@@ -384,10 +384,33 @@ public class AnotherBronzemanModePlugin extends Plugin
 
     @Subscribe
     public void onMenuOptionClicked(MenuOptionClicked event) {
-        if ((event.getMenuOption().equals("Trade with") || event.getMenuOption().equals("Accept trade")) && !config.allowTrading()) {
-            // Scold the player for attempting to trade as a bronzeman
+        if (disabledByWhitelist)
+        {
+            return; // Allow all trading if character not on whitelist
+        }
+
+        if (event.getMenuOption().equals("Trade with") || event.getMenuOption().equals("Accept trade")) {
+            // If "Allow trading" is enabled, allow all trades
+            if (config.allowTrading()) {
+                return;
+            }
+
+            // Get the target player name
+            String targetPlayer = Text.sanitize(event.getMenuTarget());
+
+            // Check if target is on the bronzeman names list (group members)
+            if (namesBronzeman != null && !namesBronzeman.isEmpty()) {
+                for (String groupMember : namesBronzeman) {
+                    if (targetPlayer.equalsIgnoreCase(groupMember)) {
+                        // Allow trade with group members
+                        return;
+                    }
+                }
+            }
+
+            // Block trade - not a group member
             event.consume();
-            sendChatMessage("You are a bronzeman. You stand alone...Sort of.");
+            sendChatMessage("You can only trade with your group members (configure in 'Bronzeman Names').");
             return;
         }
     }
