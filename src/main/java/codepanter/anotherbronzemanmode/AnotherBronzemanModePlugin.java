@@ -89,9 +89,9 @@ import static net.runelite.http.api.RuneLiteAPI.GSON;
 
 @Slf4j
 @PluginDescriptor(
-        name = "Another Bronzeman Mode",
-        description = "Limits access to buying an item on the Grand Exchange until it is obtained otherwise.",
-        tags = {"overlay", "bronzeman"}
+        name = "Group Bronzeman Mode",
+        description = "Group Bronzeman Mode - Limits Grand Exchange access to only allow buying items obtained 'the Ironman way'. Supports group sync via JSONBin.io.",
+        tags = {"overlay", "bronzeman", "group"}
 )
 public class AnotherBronzemanModePlugin extends Plugin
 {
@@ -234,7 +234,7 @@ public class AnotherBronzemanModePlugin extends Plugin
         final BufferedImage icon = ImageUtil.loadImageResource(getClass(), "/bronzeman_icon.png");
 
         navButton = NavigationButton.builder()
-                .tooltip("Another Bronzeman Mode")
+                .tooltip("Group Bronzeman Mode")
                 .icon(icon)
                 .panel(panel)
                 .priority(6)
@@ -314,7 +314,7 @@ public class AnotherBronzemanModePlugin extends Plugin
                         "To stop this message from appearing every time you log in; " +
                         "try out the new functionality by clicking the 'View Unlocked Items' button in the side-panel!";
                 final String message = new ChatMessageBuilder()
-                        .append(Color.red, "Another ")
+                        .append(Color.red, "Group ")
                         .append(Color.orange, "Bronzeman ")
                         .append(Color.red, "Mode update: ")
                         .append(Color.blue, updateDescription)

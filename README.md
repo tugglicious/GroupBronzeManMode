@@ -55,7 +55,7 @@ This player has only unlocked bronze arrows, so the other items are greyed out a
 
 ![Unlock list](https://i.imgur.com/348PI3B.png)
 
-You can see all your unlocks in the Another Bronzeman Mode side-panel as a neatly sortable and filterable list of items.
+You can see all your unlocks in the Group Bronzeman Mode side-panel as a neatly sortable and filterable list of items.
 This interface comes with search functionality, as well as the ability to re-lock an item by right clicking it and selecting "Remove".
 
 ## Credits
