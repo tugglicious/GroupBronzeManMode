@@ -467,53 +467,9 @@ public class AnotherBronzemanModePlugin extends Plugin
             return;
         }
 
-        // Trade screen widget IDs
-        // 335 = First trade screen
-        // 334 = Second trade screen (confirm)
-        if (event.getGroupId() == 335 || event.getGroupId() == 334)
-        {
-            if (config.allowTrading())
-            {
-                return; // Allow all trades
-            }
-
-            // Get the trading partner's name from the widget
-            clientThread.invokeLater(() -> {
-                Widget tradePartnerWidget = client.getWidget(event.getGroupId(), 31); // Trade partner name widget
-                if (tradePartnerWidget != null)
-                {
-                    String tradingWith = Text.removeTags(tradePartnerWidget.getText());
-                    log.info("Trade screen opened with: '{}' | Group list has {} members: {}", tradingWith, namesBronzeman != null ? namesBronzeman.size() : 0, namesBronzeman);
-
-                    // Check if they're a group member
-                    boolean isGroupMember = false;
-                    if (namesBronzeman != null && !namesBronzeman.isEmpty())
-                    {
-                        for (String groupMember : namesBronzeman)
-                        {
-                            log.info("Comparing trade partner '{}' with group member '{}'", tradingWith, groupMember.trim());
-                            if (tradingWith.equalsIgnoreCase(groupMember.trim()))
-                            {
-                                isGroupMember = true;
-                                break;
-                            }
-                        }
-                    }
-
-                    if (!isGroupMember)
-                    {
-                        log.info("Closing trade screen - '{}' is not a group member (list: {})", tradingWith, namesBronzeman);
-                        // Close the trade screen
-                        client.runScript(299); // Close trade interface script
-                        sendChatMessage("You can only trade with your group members!");
-                    }
-                    else
-                    {
-                        log.info("Allowing trade screen - '{}' is a group member", tradingWith);
-                    }
-                }
-            });
-        }
+        // Trade screen widget IDs - We no longer auto-close trade screens here
+        // The MenuOptionClicked handler is sufficient for blocking trades
+        // Removed auto-close to prevent script errors and game freezing
     }
 
     @Subscribe
