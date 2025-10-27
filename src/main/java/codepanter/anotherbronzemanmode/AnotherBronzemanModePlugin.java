@@ -1354,8 +1354,23 @@ public class AnotherBronzemanModePlugin extends Plugin
             return;
         }
 
+        // Get player name safely - handle null cases
+        String playerName = "";
+        if (client.getLocalPlayer() != null && client.getLocalPlayer().getName() != null)
+        {
+            playerName = client.getLocalPlayer().getName();
+        }
+
+        // If player name isn't loaded yet, don't disable the plugin
+        // The check will run again on login event when name is available
+        if (playerName.isEmpty())
+        {
+            disabledByWhitelist = false;
+            log.warn("Player name not available yet, skipping whitelist check until login completes");
+            return;
+        }
+
         List<String> whitelist = Text.fromCSV(whitelistStr);
-        String playerName = client.getLocalPlayer() != null ? client.getLocalPlayer().getName() : "";
 
         if (whitelist.contains(playerName))
         {
