@@ -182,6 +182,7 @@ public class AnotherBronzemanModePlugin extends Plugin
     private int bronzemanIconOffset = -1; // offset for bronzeman icon
     private boolean onSeasonalWorld;
     private boolean disabledByWhitelist = false; // Track if plugin is disabled due to character not on whitelist
+    private List<String> pendingFCMessages = new ArrayList<>(); // Queue for multiple unlock messages
     private File legacyFile;
     private File legacyFolder;
     private File profileFile;
@@ -653,7 +654,7 @@ public class AnotherBronzemanModePlugin extends Plugin
                 // Auto friends chat message
                 if (config.autoFriendsChatMessage())
                 {
-                    sendFriendsChatMessage("I unlocked " + itemName + " for the group!");
+                    sendFriendsChatMessage(itemName);
                 }
             }
         }
@@ -729,10 +730,10 @@ public class AnotherBronzemanModePlugin extends Plugin
     }
 
     /**
-     * Prepare a message for the friends chat by setting it in the chatbox
-     * The user will need to press Enter to send it
+     * Queue a friends chat message for the next unlock
+     * Multiple messages will be combined into one
      */
-    private void sendFriendsChatMessage(String message)
+    private void sendFriendsChatMessage(String itemName)
     {
         clientThread.invoke(() -> {
             // Check if player is in a friends chat
@@ -742,11 +743,43 @@ public class AnotherBronzemanModePlugin extends Plugin
                 return;
             }
 
-            // Set the message in the chatbox input field
+            // Check if chatbox is empty (user sent the previous message)
+            String currentChatboxText = client.getVarcStrValue(VarClientStr.CHATBOX_TYPED_TEXT);
+            if (currentChatboxText == null || currentChatboxText.trim().isEmpty() || !currentChatboxText.contains("I unlocked"))
+            {
+                // Chatbox is empty or doesn't have our message - clear the old queue
+                clearPendingFCMessages();
+            }
+
+            // Add this item to the pending messages queue
+            pendingFCMessages.add(itemName);
+
+            // Combine all pending messages
+            String combinedMessage;
+            if (pendingFCMessages.size() == 1)
+            {
+                combinedMessage = "I unlocked " + pendingFCMessages.get(0) + " for the group!";
+            }
+            else
+            {
+                // Multiple items: "I unlocked Fire rune, Water rune, Earth rune for the group!"
+                combinedMessage = "I unlocked " + String.join(", ", pendingFCMessages) + " for the group!";
+            }
+
+            // Set the combined message in the chatbox input field
             // The user just needs to press Enter to send it
-            client.setVarcStrValue(VarClientStr.CHATBOX_TYPED_TEXT, message);
-            log.debug("Set FC message in chatbox: {}", message);
+            client.setVarcStrValue(VarClientStr.CHATBOX_TYPED_TEXT, combinedMessage);
+            log.debug("Set FC message in chatbox (queued {} items): {}", pendingFCMessages.size(), combinedMessage);
         });
+    }
+
+    /**
+     * Clear the pending friends chat messages queue
+     * Call this when the user sends the message or opens chat
+     */
+    private void clearPendingFCMessages()
+    {
+        pendingFCMessages.clear();
     }
 
     public boolean isDeletionConfirmed(final String message, final String title)
