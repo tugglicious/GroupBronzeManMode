@@ -181,6 +181,7 @@ public class AnotherBronzemanModePlugin extends Plugin
     private List<String> namesBronzeman = new ArrayList<>();
     private int bronzemanIconOffset = -1; // offset for bronzeman icon
     private boolean onSeasonalWorld;
+    private boolean disabledByWhitelist = false; // Track if plugin is disabled due to character not on whitelist
     private File legacyFile;
     private File legacyFolder;
     private File profileFile;
@@ -302,6 +303,27 @@ public class AnotherBronzemanModePlugin extends Plugin
         if (e.getGameState() == GameState.LOGGED_IN && LOGGING_IN)
         {
             LOGGING_IN = false; // Makes sure this only happens when having just logged in; not when the state changed from 'LOADING'.
+
+            // Check character whitelist
+            if (config.enableWhitelist())
+            {
+                String whitelistStr = config.whitelistedCharacters();
+                if (whitelistStr != null && !whitelistStr.isEmpty())
+                {
+                    List<String> whitelist = Text.fromCSV(whitelistStr);
+                    String playerName = client.getLocalPlayer() != null ? client.getLocalPlayer().getName() : "";
+
+                    if (!whitelist.contains(playerName))
+                    {
+                        disabledByWhitelist = true;
+                        log.info("Character '{}' not on whitelist. Plugin disabled.", playerName);
+                        sendChatMessage("Group Bronzeman Mode is disabled for this character (not on whitelist).");
+                        return; // Exit early - don't load unlocks or enable features
+                    }
+                }
+            }
+
+            disabledByWhitelist = false; // Character is allowed
             setupUnlockHistory();
             loadPlayerUnlocks();
             loadResources();
@@ -362,10 +384,33 @@ public class AnotherBronzemanModePlugin extends Plugin
 
     @Subscribe
     public void onMenuOptionClicked(MenuOptionClicked event) {
-        if ((event.getMenuOption().equals("Trade with") || event.getMenuOption().equals("Accept trade")) && !config.allowTrading()) {
-            // Scold the player for attempting to trade as a bronzeman
+        if (disabledByWhitelist)
+        {
+            return; // Allow all trading if character not on whitelist
+        }
+
+        if (event.getMenuOption().equals("Trade with") || event.getMenuOption().equals("Accept trade")) {
+            // If "Allow trading" is enabled, allow all trades
+            if (config.allowTrading()) {
+                return;
+            }
+
+            // Get the target player name
+            String targetPlayer = Text.sanitize(event.getMenuTarget());
+
+            // Check if target is on the bronzeman names list (group members)
+            if (namesBronzeman != null && !namesBronzeman.isEmpty()) {
+                for (String groupMember : namesBronzeman) {
+                    if (targetPlayer.equalsIgnoreCase(groupMember)) {
+                        // Allow trade with group members
+                        return;
+                    }
+                }
+            }
+
+            // Block trade - not a group member
             event.consume();
-            sendChatMessage("You are a bronzeman. You stand alone...Sort of.");
+            sendChatMessage("You can only trade with your group members (configure in 'Bronzeman Names').");
             return;
         }
     }
@@ -517,6 +562,11 @@ public class AnotherBronzemanModePlugin extends Plugin
     /** Unlocks all items in the given item container. **/
     public void unlockItemContainerItems(ItemContainer itemContainer)
     {
+        if (disabledByWhitelist)
+        {
+            return; // Skip if character not on whitelist
+        }
+
         for (Item i : itemContainer.getItems())
         {
             int itemId = i.getId();
@@ -531,13 +581,22 @@ public class AnotherBronzemanModePlugin extends Plugin
             {
                 queueItemUnlock(realItemId);
 				if (config.hideUntradeables() && !tradeable) continue;
+
+                String itemName = client.getItemDefinition(realItemId).getMembersName();
+
                 if (config.sendNotification())
                 {
-                    notifier.notify("You have unlocked a new item: " + client.getItemDefinition(realItemId).getMembersName() + ".");
+                    notifier.notify("You have unlocked a new item: " + itemName + ".");
                 }
                 else if (config.sendChatMessage())
                 {
-                    sendChatMessage("You have unlocked a new item: " + client.getItemDefinition(realItemId).getMembersName() + ".");
+                    sendChatMessage("You have unlocked a new item: " + itemName + ".");
+                }
+
+                // Auto friends chat message
+                if (config.autoFriendsChatMessage())
+                {
+                    sendFriendsChatMessage("I unlocked " + itemName + " for the group!");
                 }
             }
         }
@@ -607,6 +666,19 @@ public class AnotherBronzemanModePlugin extends Plugin
                 .build());
     }
 
+    /**
+     * Send a message to the friends chat
+     */
+    private void sendFriendsChatMessage(String message)
+    {
+        // RuneLite doesn't have a direct API to send FC messages, so we use the chatbox
+        // This simulates typing a message and pressing enter
+        clientThread.invoke(() -> {
+            String chatMessage = message;
+            client.runScript(96, chatMessage); // Script 96 is for sending chat messages
+        });
+    }
+
     public boolean isDeletionConfirmed(final String message, final String title)
     {
         int confirm = JOptionPane.showConfirmDialog(panel,
@@ -617,6 +689,11 @@ public class AnotherBronzemanModePlugin extends Plugin
 
     void killSearchResults()
     {
+        if (disabledByWhitelist)
+        {
+            return; // Don't restrict GE if character not on whitelist
+        }
+
         Widget grandExchangeSearchResults = client.getWidget(ComponentID.CHATBOX_GE_SEARCH_RESULTS);
 
         if (grandExchangeSearchResults == null)
