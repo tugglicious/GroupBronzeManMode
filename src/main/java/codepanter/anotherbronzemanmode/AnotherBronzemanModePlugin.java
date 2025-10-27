@@ -744,7 +744,7 @@ public class AnotherBronzemanModePlugin extends Plugin
 
             // Set the message in the chatbox input field
             // The user just needs to press Enter to send it
-            client.setVar(VarClientStr.CHATBOX_TYPED_TEXT, message);
+            client.setVarcStrValue(VarClientStr.CHATBOX_TYPED_TEXT, message);
             log.debug("Set FC message in chatbox: {}", message);
         });
     }
