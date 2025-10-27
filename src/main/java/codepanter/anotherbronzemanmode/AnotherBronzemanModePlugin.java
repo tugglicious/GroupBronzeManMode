@@ -436,12 +436,13 @@ public class AnotherBronzemanModePlugin extends Plugin
                 targetPlayer = targetPlayer.substring(0, targetPlayer.indexOf("(")).trim();
             }
 
-            log.debug("Trade attempt with: '{}' (raw target: '{}')", targetPlayer, event.getMenuTarget());
+            log.info("Trade attempt with: '{}' (raw target: '{}') | Group list has {} members", targetPlayer, event.getMenuTarget(), namesBronzeman != null ? namesBronzeman.size() : 0);
 
             // Check if target is on the bronzeman names list (group members)
             if (namesBronzeman != null && !namesBronzeman.isEmpty()) {
                 for (String groupMember : namesBronzeman) {
                     String cleanGroupMember = groupMember.trim();
+                    log.info("Comparing '{}' with group member '{}'", targetPlayer, cleanGroupMember);
                     if (targetPlayer.equalsIgnoreCase(cleanGroupMember)) {
                         log.info("Allowing trade with group member: {}", targetPlayer);
                         // Allow trade with group members
@@ -451,7 +452,7 @@ public class AnotherBronzemanModePlugin extends Plugin
             }
 
             // Block trade - not a group member
-            log.info("Blocking trade with non-group member: {}", targetPlayer);
+            log.info("Blocking trade with non-group member: '{}'. Current group list: {}", targetPlayer, namesBronzeman);
             event.consume();
             sendChatMessage("You can only trade with your group members: " + config.namesBronzeman());
             return;
@@ -482,7 +483,7 @@ public class AnotherBronzemanModePlugin extends Plugin
                 if (tradePartnerWidget != null)
                 {
                     String tradingWith = Text.sanitize(tradePartnerWidget.getText());
-                    log.debug("Trade screen opened with: '{}'", tradingWith);
+                    log.info("Trade screen opened with: '{}' | Group list has {} members: {}", tradingWith, namesBronzeman != null ? namesBronzeman.size() : 0, namesBronzeman);
 
                     // Check if they're a group member
                     boolean isGroupMember = false;
@@ -490,6 +491,7 @@ public class AnotherBronzemanModePlugin extends Plugin
                     {
                         for (String groupMember : namesBronzeman)
                         {
+                            log.info("Comparing trade partner '{}' with group member '{}'", tradingWith, groupMember.trim());
                             if (tradingWith.equalsIgnoreCase(groupMember.trim()))
                             {
                                 isGroupMember = true;
@@ -500,10 +502,14 @@ public class AnotherBronzemanModePlugin extends Plugin
 
                     if (!isGroupMember)
                     {
-                        log.info("Closing trade screen - {} is not a group member", tradingWith);
+                        log.info("Closing trade screen - '{}' is not a group member (list: {})", tradingWith, namesBronzeman);
                         // Close the trade screen
                         client.runScript(299); // Close trade interface script
                         sendChatMessage("You can only trade with your group members!");
+                    }
+                    else
+                    {
+                        log.info("Allowing trade screen - '{}' is a group member", tradingWith);
                     }
                 }
             });
@@ -853,6 +859,7 @@ public class AnotherBronzemanModePlugin extends Plugin
     private void updateNamesBronzeman()
     {
         namesBronzeman = Text.fromCSV(config.namesBronzeman());
+        log.info("Updated group members list: {} members - {}", namesBronzeman.size(), namesBronzeman);
     }
 
     private void updateScreenshotUnlock()
