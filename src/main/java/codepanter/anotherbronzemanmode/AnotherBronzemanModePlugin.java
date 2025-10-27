@@ -243,24 +243,30 @@ public class AnotherBronzemanModePlugin extends Plugin
 
         clientToolbar.addNavigation(navButton);
 
-        // Initialize group sync if enabled
-        if (config.enableGroupSync())
-        {
-            initializeGroupSync();
-        }
-
+        // Check whitelist if already logged in (plugin enabled mid-session)
         clientThread.invoke(() ->
         {
             if (client.getGameState() == GameState.LOGGED_IN)
             {
-                onSeasonalWorld = isSeasonalWorld(client.getWorld());
-                // A player can not be a bronzeman on a seasonal world.
-                if (!onSeasonalWorld)
+                checkCharacterWhitelist();
+
+                if (!disabledByWhitelist)
                 {
-                    setChatboxName(getNameChatbox());
+                    onSeasonalWorld = isSeasonalWorld(client.getWorld());
+                    // A player can not be a bronzeman on a seasonal world.
+                    if (!onSeasonalWorld)
+                    {
+                        setChatboxName(getNameChatbox());
+                    }
                 }
             }
         });
+
+        // Initialize group sync if enabled (after whitelist check)
+        if (config.enableGroupSync() && !disabledByWhitelist)
+        {
+            initializeGroupSync();
+        }
     }
 
     @Override
@@ -305,25 +311,13 @@ public class AnotherBronzemanModePlugin extends Plugin
             LOGGING_IN = false; // Makes sure this only happens when having just logged in; not when the state changed from 'LOADING'.
 
             // Check character whitelist
-            if (config.enableWhitelist())
-            {
-                String whitelistStr = config.whitelistedCharacters();
-                if (whitelistStr != null && !whitelistStr.isEmpty())
-                {
-                    List<String> whitelist = Text.fromCSV(whitelistStr);
-                    String playerName = client.getLocalPlayer() != null ? client.getLocalPlayer().getName() : "";
+            checkCharacterWhitelist();
 
-                    if (!whitelist.contains(playerName))
-                    {
-                        disabledByWhitelist = true;
-                        log.info("Character '{}' not on whitelist. Plugin disabled.", playerName);
-                        sendChatMessage("Group Bronzeman Mode is disabled for this character (not on whitelist).");
-                        return; // Exit early - don't load unlocks or enable features
-                    }
-                }
+            if (disabledByWhitelist)
+            {
+                return; // Exit early - don't load unlocks or enable features
             }
 
-            disabledByWhitelist = false; // Character is allowed
             setupUnlockHistory();
             loadPlayerUnlocks();
             loadResources();
@@ -689,6 +683,11 @@ public class AnotherBronzemanModePlugin extends Plugin
     /** Queues a new unlock to be properly displayed **/
     public void queueItemUnlock(int itemId)
     {
+        if (disabledByWhitelist)
+        {
+            return; // Skip if character not on whitelist (failsafe)
+        }
+
         unlockedItems.add(itemId);
 
         panel.displayItems(new ArrayList<ItemObject>()); // Redraw the panel
@@ -1334,5 +1333,40 @@ public class AnotherBronzemanModePlugin extends Plugin
         // Save updated unlocks
         savePlayerUnlocks();
         panel.displayItems(new ArrayList<ItemObject>()); // Redraw panel
+    }
+
+    /**
+     * Check if the current character is on the whitelist
+     * Sets disabledByWhitelist flag accordingly
+     */
+    private void checkCharacterWhitelist()
+    {
+        if (!config.enableWhitelist())
+        {
+            disabledByWhitelist = false;
+            return;
+        }
+
+        String whitelistStr = config.whitelistedCharacters();
+        if (whitelistStr == null || whitelistStr.isEmpty())
+        {
+            disabledByWhitelist = false;
+            return;
+        }
+
+        List<String> whitelist = Text.fromCSV(whitelistStr);
+        String playerName = client.getLocalPlayer() != null ? client.getLocalPlayer().getName() : "";
+
+        if (whitelist.contains(playerName))
+        {
+            disabledByWhitelist = false;
+            log.info("Character '{}' is on whitelist. Plugin enabled.", playerName);
+        }
+        else
+        {
+            disabledByWhitelist = true;
+            log.info("Character '{}' not on whitelist. Plugin disabled.", playerName);
+            sendChatMessage("Group Bronzeman Mode is disabled for this character (not on whitelist).");
+        }
     }
 }
