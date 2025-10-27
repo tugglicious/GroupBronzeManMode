@@ -389,7 +389,13 @@ public class AnotherBronzemanModePlugin extends Plugin
             return; // Allow all trading if character not on whitelist
         }
 
-        if (event.getMenuOption().equals("Trade with") || event.getMenuOption().equals("Accept trade")) {
+        String menuOption = event.getMenuOption();
+
+        // Catch all trade-related menu options
+        if (menuOption.equals("Trade with") ||
+            menuOption.equals("Accept trade") ||
+            menuOption.contains("trade")) {
+
             // If "Allow trading" is enabled, allow all trades
             if (config.allowTrading()) {
                 return;
@@ -398,10 +404,19 @@ public class AnotherBronzemanModePlugin extends Plugin
             // Get the target player name
             String targetPlayer = Text.sanitize(event.getMenuTarget());
 
+            // Remove any level indicators or extra text (e.g., "PlayerName (level-126)")
+            if (targetPlayer.contains("(")) {
+                targetPlayer = targetPlayer.substring(0, targetPlayer.indexOf("(")).trim();
+            }
+
+            log.debug("Trade attempt with: '{}' (raw target: '{}')", targetPlayer, event.getMenuTarget());
+
             // Check if target is on the bronzeman names list (group members)
             if (namesBronzeman != null && !namesBronzeman.isEmpty()) {
                 for (String groupMember : namesBronzeman) {
-                    if (targetPlayer.equalsIgnoreCase(groupMember)) {
+                    String cleanGroupMember = groupMember.trim();
+                    if (targetPlayer.equalsIgnoreCase(cleanGroupMember)) {
+                        log.info("Allowing trade with group member: {}", targetPlayer);
                         // Allow trade with group members
                         return;
                     }
@@ -409,9 +424,62 @@ public class AnotherBronzemanModePlugin extends Plugin
             }
 
             // Block trade - not a group member
+            log.info("Blocking trade with non-group member: {}", targetPlayer);
             event.consume();
-            sendChatMessage("You can only trade with your group members (configure in 'Bronzeman Names').");
+            sendChatMessage("You can only trade with your group members: " + config.namesBronzeman());
             return;
+        }
+    }
+
+    @Subscribe
+    public void onWidgetLoaded(WidgetLoaded event)
+    {
+        if (disabledByWhitelist)
+        {
+            return;
+        }
+
+        // Trade screen widget IDs
+        // 335 = First trade screen
+        // 334 = Second trade screen (confirm)
+        if (event.getGroupId() == 335 || event.getGroupId() == 334)
+        {
+            if (config.allowTrading())
+            {
+                return; // Allow all trades
+            }
+
+            // Get the trading partner's name from the widget
+            clientThread.invokeLater(() -> {
+                Widget tradePartnerWidget = client.getWidget(event.getGroupId(), 31); // Trade partner name widget
+                if (tradePartnerWidget != null)
+                {
+                    String tradingWith = Text.sanitize(tradePartnerWidget.getText());
+                    log.debug("Trade screen opened with: '{}'", tradingWith);
+
+                    // Check if they're a group member
+                    boolean isGroupMember = false;
+                    if (namesBronzeman != null && !namesBronzeman.isEmpty())
+                    {
+                        for (String groupMember : namesBronzeman)
+                        {
+                            if (tradingWith.equalsIgnoreCase(groupMember.trim()))
+                            {
+                                isGroupMember = true;
+                                break;
+                            }
+                        }
+                    }
+
+                    if (!isGroupMember)
+                    {
+                        log.info("Closing trade screen - {} is not a group member", tradingWith);
+                        // Close the trade screen
+                        client.runScript(299); // Close trade interface script
+                        sendChatMessage("You can only trade with your group members!");
+                    }
+                }
+            });
         }
     }
 
