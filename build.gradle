@@ -37,6 +37,13 @@ tasks.withType(JavaCompile) {
     options.encoding = 'UTF-8'
 }
 
+// Ensure runelite-plugin.properties is included in the JAR
+jar {
+    from('.')  {
+        include 'runelite-plugin.properties'
+    }
+}
+
 task createProperties(dependsOn: processResources) {
     doLast {
         def bronzeFile = layout.buildDirectory.file("resources/main/anotherbronzemanmode_version.txt").get().asFile
