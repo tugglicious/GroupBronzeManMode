@@ -1261,7 +1261,8 @@ public class AnotherBronzemanModePlugin extends Plugin
             {
                 // Merge remote unlocks into local
                 mergeRemoteUnlocks();
-                sendChatMessage("Synced " + newUnlocks + " new unlocks from your group!");
+                String itemWord = newUnlocks == 1 ? "item" : "items";
+                sendChatMessage("Group sync: " + newUnlocks + " new " + itemWord + " unlocked by your group!");
             }
         });
 
@@ -1316,13 +1317,15 @@ public class AnotherBronzemanModePlugin extends Plugin
             if (newUnlocks > 0)
             {
                 mergeRemoteUnlocks();
+
+                // Always show sync notification when items are unlocked from group
+                String itemWord = newUnlocks == 1 ? "item" : "items";
+                sendChatMessage("Group sync: " + newUnlocks + " new " + itemWord + " unlocked by your group!");
+
+                // Also send desktop notification if enabled
                 if (config.sendNotification())
                 {
                     notifier.notify("Group Bronzeman: " + newUnlocks + " new unlocks from your group!");
-                }
-                else if (config.sendChatMessage())
-                {
-                    sendChatMessage("Your group unlocked " + newUnlocks + " new items!");
                 }
             }
 
