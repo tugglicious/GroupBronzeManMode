@@ -11,6 +11,7 @@ out/
 *.ipr
 *.iws
 .vscode/
+!.vscode/launch.json
 .settings/
 .classpath
 .project
