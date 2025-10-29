@@ -625,6 +625,12 @@ public class AnotherBronzemanModePlugin extends Plugin
             return; // Skip if character not on whitelist
         }
 
+        // Don't unlock items while in minigames (temporary items like in LMS)
+        if (isInMinigame())
+        {
+            return;
+        }
+
         for (Item i : itemContainer.getItems())
         {
             int itemId = i.getId();
@@ -766,6 +772,9 @@ public class AnotherBronzemanModePlugin extends Plugin
                 combinedMessage = "I unlocked " + String.join(", ", pendingFCMessages) + " for the group!";
             }
 
+            // Prefix with "/" to send to friends chat (clan chat) instead of public chat
+            combinedMessage = "/" + combinedMessage;
+
             // Set the combined message in the chatbox input field
             // The user just needs to press Enter to send it
             client.setVarcStrValue(VarClientStr.CHATBOX_TYPED_TEXT, combinedMessage);
@@ -904,6 +913,42 @@ public class AnotherBronzemanModePlugin extends Plugin
 
         World world = worlds.findWorld(worldNumber);
         return world != null && world.getTypes().contains(WorldType.SEASONAL);
+    }
+
+    /**
+     * Checks if the player is currently in a minigame where items should not be unlocked.
+     * This prevents unlocking temporary items from minigames like Last Man Standing.
+     *
+     * @return boolean true if in a minigame, false otherwise.
+     */
+    private boolean isInMinigame()
+    {
+        // Check Last Man Standing
+        if (client.getVarbitValue(Varbits.IN_LMS) == 1)
+        {
+            return true;
+        }
+
+        // Check if in a raid (CoX)
+        if (client.getVarbitValue(Varbits.IN_RAID) == 1)
+        {
+            return true;
+        }
+
+        // Check Theatre of Blood (1=Party, 2=Inside/Spectator, 3=Dead Spectating)
+        int tobState = client.getVarbitValue(Varbits.THEATRE_OF_BLOOD);
+        if (tobState == 2 || tobState == 3)
+        {
+            return true;
+        }
+
+        // Check Barbarian Assault
+        if (client.getVarbitValue(Varbits.IN_GAME_BA) == 1)
+        {
+            return true;
+        }
+
+        return false;
     }
 
     /**
@@ -1261,7 +1306,8 @@ public class AnotherBronzemanModePlugin extends Plugin
             {
                 // Merge remote unlocks into local
                 mergeRemoteUnlocks();
-                sendChatMessage("Synced " + newUnlocks + " new unlocks from your group!");
+                String itemWord = newUnlocks == 1 ? "item" : "items";
+                sendChatMessage("Group sync: " + newUnlocks + " new " + itemWord + " unlocked by your group!");
             }
         });
 
@@ -1316,13 +1362,15 @@ public class AnotherBronzemanModePlugin extends Plugin
             if (newUnlocks > 0)
             {
                 mergeRemoteUnlocks();
+
+                // Always show sync notification when items are unlocked from group
+                String itemWord = newUnlocks == 1 ? "item" : "items";
+                sendChatMessage("Group sync: " + newUnlocks + " new " + itemWord + " unlocked by your group!");
+
+                // Also send desktop notification if enabled
                 if (config.sendNotification())
                 {
                     notifier.notify("Group Bronzeman: " + newUnlocks + " new unlocks from your group!");
-                }
-                else if (config.sendChatMessage())
-                {
-                    sendChatMessage("Your group unlocked " + newUnlocks + " new items!");
                 }
             }
 
