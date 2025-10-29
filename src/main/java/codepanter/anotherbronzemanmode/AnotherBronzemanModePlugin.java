@@ -772,6 +772,9 @@ public class AnotherBronzemanModePlugin extends Plugin
                 combinedMessage = "I unlocked " + String.join(", ", pendingFCMessages) + " for the group!";
             }
 
+            // Prefix with "/" to send to friends chat (clan chat) instead of public chat
+            combinedMessage = "/" + combinedMessage;
+
             // Set the combined message in the chatbox input field
             // The user just needs to press Enter to send it
             client.setVarcStrValue(VarClientStr.CHATBOX_TYPED_TEXT, combinedMessage);
