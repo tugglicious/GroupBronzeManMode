@@ -1,1 +1,13 @@
-﻿
+﻿{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "java",
+      "name": "Run Plugin Test",
+      "request": "launch",
+      "mainClass": "codepanter.anotherbronzemanmode.AnotherBronzemanModePluginTest",
+      "projectName": "group-bronzeman-mode",
+      "vmArgs": "-ea"
+    }
+  ]
+}
