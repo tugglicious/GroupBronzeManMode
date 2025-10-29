@@ -36,6 +36,7 @@ sourceCompatibility = '1.8'
 tasks.withType(JavaCompile) {
     options.encoding = 'UTF-8'
     options.compilerArgs << '-parameters'
+    options.fork = true  // IMPORTANT: Fork the compiler process to use JVM args
 
     // Add JVM arguments for Lombok to work with Java 17+
     options.forkOptions.jvmArgs += [
