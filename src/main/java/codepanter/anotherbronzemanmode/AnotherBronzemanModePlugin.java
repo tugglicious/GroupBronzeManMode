@@ -760,20 +760,46 @@ public class AnotherBronzemanModePlugin extends Plugin
             // Add this item to the pending messages queue
             pendingFCMessages.add(itemName);
 
-            // Combine all pending messages
+            // Combine all pending messages with character limit protection
             String combinedMessage;
+            final int MAX_ITEMS_TO_LIST = 5; // Don't list more than 5 items to prevent overflow
+            final int MAX_MESSAGE_LENGTH = 200; // RuneScape chat limit is around 80-100, but we're being safe
+
             if (pendingFCMessages.size() == 1)
             {
                 combinedMessage = "I unlocked " + pendingFCMessages.get(0) + " for the group!";
             }
+            else if (pendingFCMessages.size() <= MAX_ITEMS_TO_LIST)
+            {
+                // Try listing items, but check length
+                String itemList = String.join(", ", pendingFCMessages);
+                String testMessage = "I unlocked " + itemList + " for the group!";
+
+                if (testMessage.length() <= MAX_MESSAGE_LENGTH)
+                {
+                    combinedMessage = testMessage;
+                }
+                else
+                {
+                    // Too long, use count instead
+                    combinedMessage = "I unlocked " + pendingFCMessages.size() + " items for the group!";
+                }
+            }
             else
             {
-                // Multiple items: "I unlocked Fire rune, Water rune, Earth rune for the group!"
-                combinedMessage = "I unlocked " + String.join(", ", pendingFCMessages) + " for the group!";
+                // Many items: just show count to avoid overflow
+                combinedMessage = "I unlocked " + pendingFCMessages.size() + " items for the group!";
             }
 
             // Prefix with "/" to send to friends chat (clan chat) instead of public chat
             combinedMessage = "/" + combinedMessage;
+
+            // Double-check final message length before setting
+            if (combinedMessage.length() > MAX_MESSAGE_LENGTH)
+            {
+                // Fallback: just use item count
+                combinedMessage = "/I unlocked " + pendingFCMessages.size() + " items for the group!";
+            }
 
             // Set the combined message in the chatbox input field
             // The user just needs to press Enter to send it
@@ -1307,7 +1333,19 @@ public class AnotherBronzemanModePlugin extends Plugin
                 // Merge remote unlocks into local
                 mergeRemoteUnlocks();
                 String itemWord = newUnlocks == 1 ? "item" : "items";
-                sendChatMessage("Group sync: " + newUnlocks + " new " + itemWord + " unlocked by your group!");
+
+                // Send a colored, prominent chat message
+                final String message = new ChatMessageBuilder()
+                    .append(Color.ORANGE, "Group Sync: ")
+                    .append(Color.GREEN, String.valueOf(newUnlocks))
+                    .append(Color.WHITE, " new " + itemWord + " synced from your group!")
+                    .build();
+
+                chatMessageManager.queue(
+                    QueuedMessage.builder()
+                        .type(ChatMessageType.GAMEMESSAGE)
+                        .runeLiteFormattedMessage(message)
+                        .build());
             }
         });
 
@@ -1365,7 +1403,19 @@ public class AnotherBronzemanModePlugin extends Plugin
 
                 // Always show sync notification when items are unlocked from group
                 String itemWord = newUnlocks == 1 ? "item" : "items";
-                sendChatMessage("Group sync: " + newUnlocks + " new " + itemWord + " unlocked by your group!");
+
+                // Send a colored, prominent chat message
+                final String message = new ChatMessageBuilder()
+                    .append(Color.ORANGE, "Group Sync: ")
+                    .append(Color.GREEN, String.valueOf(newUnlocks))
+                    .append(Color.WHITE, " new " + itemWord + " synced from your group!")
+                    .build();
+
+                chatMessageManager.queue(
+                    QueuedMessage.builder()
+                        .type(ChatMessageType.GAMEMESSAGE)
+                        .runeLiteFormattedMessage(message)
+                        .build());
 
                 // Also send desktop notification if enabled
                 if (config.sendNotification())
